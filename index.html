@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Web App với Google Sheet</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .hidden { display: none; }
+        .container { max-width: 600px; margin: 0 auto; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- KHUNG ĐĂNG NHẬP -->
+    <div id="loginSection">
+        <h2>Đăng Nhập</h2>
+        <input type="text" id="username" placeholder="Tên đăng nhập">
+        <input type="password" id="password" placeholder="Mật khẩu">
+        <button onclick="login()">Đăng Nhập</button>
+        <p id="loginMessage" style="color:red;"></p>
+    </div>
+
+    <!-- KHUNG QUẢN LÝ DỮ LIỆU (CRUD) -->
+    <div id="appSection" class="hidden">
+        <h2>Quản lý Dữ liệu</h2>
+        <button onclick="logout()" style="background-color: #f44336; color: white;">Đăng Xuất</button>
+        
+        <h3>Thêm dữ liệu mới</h3>
+        <input type="text" id="newName" placeholder="Tên">
+        <input type="text" id="newDesc" placeholder="Mô tả">
+        <button onclick="createData()">Thêm vào Google Sheet</button>
+        <p id="appMessage" style="color:green;"></p>
+
+        <h3>Danh sách dữ liệu</h3>
+        <button onclick="loadData()">Tải lại danh sách</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên</th>
+                    <th>Mô tả</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable">
+                <!-- Dữ liệu sẽ hiển thị ở đây -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // THAY ĐƯỜNG LINK WEB APP CỦA BẠN VÀO ĐÂY
+    const API_URL = 'YOUR_WEB_APP_URL';
+
+    // Hàm gọi API
+    async function callAPI(payload) {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                // Dùng text/plain để tránh lỗi CORS preflight từ Google
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
+            });
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            alert("Có lỗi xảy ra khi kết nối server!");
+        }
+    }
+
+    // 1. Đăng nhập
+    async function login() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const res = await callAPI({ action: 'login', username: u, password: p });
+        
+        if (res.success) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+            loadData(); // Đăng nhập xong thì tải dữ liệu
+        } else {
+            document.getElementById('loginMessage').innerText = res.message;
+        }
+    }
+
+    // Đăng xuất
+    function logout() {
+        document.getElementById('loginSection').classList.remove('hidden');
+        document.getElementById('appSection').classList.add('hidden');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+    }
+
+    // 2. READ: Tải dữ liệu
+    async function loadData() {
+        const res = await callAPI({ action: 'read' });
+        if (res.success) {
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+            res.data.forEach(row => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${row.id}</td>
+                        <td>${row.name}</td>
+                        <td>${row.description}</td>
+                        <td>
+                            <button onclick="deleteData(${row.id})">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    // 3. CREATE: Thêm dữ liệu
+    async function createData() {
+        const name = document.getElementById('newName').value;
+        const desc = document.getElementById('newDesc').value;
+        if(!name) return alert("Vui lòng nhập tên!");
+
+        const res = await callAPI({ action: 'create', name: name, description: desc });
+        if (res.success) {
+            document.getElementById('appMessage').innerText = "Thêm thành công!";
+            document.getElementById('newName').value = '';
+            document.getElementById('newDesc').value = '';
+            loadData(); // Tải lại bảng
+        }
+    }
+
+    // 4. DELETE: Xóa dữ liệu (Update bạn có thể phát triển thêm tương tự)
+    async function deleteData(id) {
+        if(confirm("Bạn có chắc muốn xóa ID: " + id + "?")) {
+            const res = await callAPI({ action: 'delete', id: id });
+            if (res.success) {
+                loadData();
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
