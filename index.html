@@ -2,62 +2,191 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Web App với Google Sheet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Dữ liệu Google Sheet</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .hidden { display: none; }
-        .container { max-width: 600px; margin: 0 auto; }
-        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        /* --- Nền tảng và Bố cục --- */
+        * { box-sizing: border-box; transition: all 0.2s ease-in-out; }
+        body { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; color: #333; line-height: 1.6; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        .main-header { background-color: #ffffff; padding: 1rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border-bottom: 3px solid #3498db; }
+        .main-header h1 { margin: 0; color: #3498db; font-size: 1.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+
+        .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; width: 100%; }
+        .hidden { display: none !important; }
+
+        /* --- Các thẻ Card và Section --- */
+        .card, .section-card { background-color: #ffffff; padding: 2rem; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); margin-bottom: 2rem; border: 1px solid #e1e8ed; }
+        .card h2, .section-card h3 { color: #2c3e50; font-weight: 600; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+        .card-header-with-action { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 1rem; margin-bottom: 1rem; }
+        .card-header-with-action h3 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+
+        /* --- Input và Form --- */
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555; font-size: 0.9rem; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 8px; background-color: #fafbfc; font-size: 1rem; color: #333; }
+        input:focus { border-color: #3498db; outline: none; background-color: #fff; box-shadow: 0 0 8px rgba(52, 152, 219, 0.2); }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; gap: 1rem; } }
+
+        /* --- Nút bấm --- */
+        button { cursor: pointer; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        button:focus { outline: none; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        button:active { transform: translateY(1px); }
+
+        .btn-primary { background-color: #3498db; color: white; }
+        .btn-primary:hover { background-color: #2980b9; }
+
+        .btn-success { background-color: #27ae60; color: white; }
+        .btn-success:hover { background-color: #219150; }
+
+        .btn-danger { background-color: #e74c3c; color: white; }
+        .btn-danger:hover { background-color: #c0392b; }
+        .btn-sm { padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; }
+
+        .btn-full { width: 100%; margin-top: 1rem; }
+        
+        .login-btn-container { text-align: center; }
+        #loginSection .card { max-width: 450px; margin: 3rem auto; }
+
+        /* --- Bảng Dữ liệu --- */
+        .table-responsive { overflow-x: auto; border-radius: 8px; border: 1px solid #e1e8ed; margin-top: 1rem; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th, td { border-bottom: 1px solid #e1e8ed; padding: 1rem 1.5rem; text-align: left; }
+        
+        thead th { background-color: #f8f9fa; color: #2c3e50; font-weight: 700; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
+        tbody tr:hover { background-color: #fcfdfe; }
+        tbody td { color: #555; }
+        
+        .action-cell { white-space: nowrap; }
+
+        /* --- Phản hồi và Message --- */
+        .message { margin-top: 1rem; padding: 12px 15px; border-radius: 8px; font-weight: 600; display: block; min-height: 48px; }
+        .message-success { background-color: rgba(39, 174, 96, 0.1); color: #27ae60; border: 1px solid #27ae60; }
+        .message-error { background-color: rgba(231, 76, 60, 0.1); color: #e74c3c; border: 1px solid #e74c3c; }
+
+        /* --- Hiệu ứng Loading --- */
+        .loading-spinner { display: inline-block; width: 1.2rem; height: 1.2rem; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        /* --- Footer --- */
+        .main-footer { text-align: center; padding: 1.5rem 0; margin-top: auto; border-top: 1px solid #e1e8ed; color: #888; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <!-- KHUNG ĐĂNG NHẬP -->
-    <div id="loginSection">
-        <h2>Đăng Nhập</h2>
-        <input type="text" id="username" placeholder="Tên đăng nhập">
-        <input type="password" id="password" placeholder="Mật khẩu">
-        <button onclick="login()">Đăng Nhập</button>
-        <p id="loginMessage" style="color:red;"></p>
-    </div>
+    <header class="main-header">
+        <div class="container">
+            <h1>GSData Manager</h1>
+        </div>
+    </header>
 
-    <!-- KHUNG QUẢN LÝ DỮ LIỆU (CRUD) -->
-    <div id="appSection" class="hidden">
-        <h2>Quản lý Dữ liệu</h2>
-        <button onclick="logout()" style="background-color: #f44336; color: white;">Đăng Xuất</button>
-        
-        <h3>Thêm dữ liệu mới</h3>
-        <input type="text" id="newName" placeholder="Tên">
-        <input type="text" id="newDesc" placeholder="Mô tả">
-        <button onclick="createData()">Thêm vào Google Sheet</button>
-        <p id="appMessage" style="color:green;"></p>
+    <main class="container">
+        <!-- KHUNG ĐĂNG NHẬP -->
+        <div id="loginSection">
+            <div class="card">
+                <h2>Đăng Nhập</h2>
+                <div class="input-group">
+                    <label for="username">Tên đăng nhập</label>
+                    <input type="text" id="username" placeholder="Nhập tên đăng nhập của bạn...">
+                </div>
+                <div class="input-group">
+                    <label for="password">Mật khẩu</label>
+                    <input type="password" id="password" placeholder="Nhập mật khẩu của bạn...">
+                </div>
+                <div class="login-btn-container">
+                    <button class="btn-primary btn-full" onclick="login()">Đăng Nhập</button>
+                </div>
+                <div id="loginMessage" class="message hidden"></div>
+            </div>
+        </div>
 
-        <h3>Danh sách dữ liệu</h3>
-        <button onclick="loadData()">Tải lại danh sách</button>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tên</th>
-                    <th>Mô tả</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody id="dataTable">
-                <!-- Dữ liệu sẽ hiển thị ở đây -->
-            </tbody>
-        </table>
-    </div>
-</div>
+        <!-- KHUNG QUẢN LÝ DỮ LIỆU (CRUD) -->
+        <div id="appSection" class="hidden">
+            <div class="card_no_style" style="margin-bottom: 2rem;">
+                <div class="card-header-with-action" style="background: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    <h2 style="margin: 0;">Quản lý Dữ liệu</h2>
+                    <button class="btn-danger btn-sm" onclick="logout()">Đăng Xuất</button>
+                </div>
+            </div>
+            
+            <section class="section-card">
+                <h3>Thêm dữ liệu mới</h3>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="newName">Tên</label>
+                        <input type="text" id="newName" placeholder="Nhập tên...">
+                    </div>
+                    <div class="input-group">
+                        <label for="newDesc">Mô tả</label>
+                        <input type="text" id="newDesc" placeholder="Nhập mô tả...">
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="createData()">Thêm vào Google Sheet</button>
+                <div id="appMessage" class="message hidden"></div>
+            </section>
+
+            <section class="section-card">
+                <div class="card-header-with-action">
+                    <h3>Danh sách dữ liệu</h3>
+                    <button id="loadBtn" class="btn-success btn-sm" onclick="loadData()">Tải lại danh sách</button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên</th>
+                                <th>Mô tả</th>
+                                <th class="action-cell">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTable">
+                            <tr><td colspan="4" style="text-align:center;color:#888;">Nhấn "Tải lại danh sách" để hiển thị dữ liệu</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            &copy; 2024 GSData Manager. Powered by Google Sheets & GitHub Pages.
+        </div>
+    </footer>
 
 <script>
-    // THAY ĐƯỜNG LINK WEB APP CỦA BẠN VÀO ĐÂY
+    // --- CẤU HÌNH ---
+    // THAY ĐƯỜNG LINK WEB APP CỦA BẠN VÀO ĐÂY (Giữ nguyên link, chỉ cần dán đè YOUR_WEB_APP_URL)
     const API_URL = 'https://script.google.com/macros/s/AKfycby6DGp9uyixUgAY4fShrzrWVWr19pHwbX4y_ZIEI0uvCY8y_HluPam4HJN66ZRlwuXw/exec';
 
-    // Hàm gọi API
+    // --- TIỆN ÍCH UI ---
+    function showMessage(elementId, message, type='success') {
+        const msgEl = document.getElementById(elementId);
+        msgEl.innerText = message;
+        msgEl.classList.remove('hidden', 'message-success', 'message-error');
+        msgEl.classList.add(type === 'success' ? 'message-success' : 'message-error');
+    }
+
+    function hideMessage(elementId) {
+        document.getElementById(elementId).classList.add('hidden');
+    }
+
+    function toggleBtnState(btnId, loading=true, text) {
+        const btn = document.getElementById(btnId);
+        btn.disabled = loading;
+        if (loading) {
+            btn.innerHTML = `<span class="loading-spinner"></span> Đang xử lý...`;
+        } else {
+            btn.innerText = text;
+        }
+    }
+
+    // --- CORE API ---
+    // Hàm gọi API với phản hồi lỗi chi tiết hơn
     async function callAPI(payload) {
         try {
             const response = await fetch(API_URL, {
@@ -66,78 +195,125 @@
                 // Dùng text/plain để tránh lỗi CORS preflight từ Google
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
             });
+            if (!response.ok) throw new Error("Server error");
             return await response.json();
         } catch (error) {
             console.error(error);
-            alert("Có lỗi xảy ra khi kết nối server!");
+            return { success: false, message: "Có lỗi xảy ra khi kết nối server. Hãy thử lại sau!" };
         }
     }
 
+    // --- CHỨC NĂNG CHÍNH (JS GIỮ NGUYÊN LOGIC, CHỈ CẬP NHẬT UI) ---
     // 1. Đăng nhập
     async function login() {
-        const u = document.getElementById('username').value;
-        const p = document.getElementById('password').value;
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value.trim();
+        
+        if (!u || !p) {
+            showMessage('loginMessage', 'Vui lòng nhập tên đăng nhập và mật khẩu.', 'error');
+            return;
+        }
+        
+        hideMessage('loginMessage');
+        toggleBtnState('loginBtn', true, "Đăng Nhập");
+
         const res = await callAPI({ action: 'login', username: u, password: p });
+        toggleBtnState('loginBtn', false, "Đăng Nhập");
         
         if (res.success) {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
             loadData(); // Đăng nhập xong thì tải dữ liệu
         } else {
-            document.getElementById('loginMessage').innerText = res.message;
+            showMessage('loginMessage', res.message, 'error');
         }
     }
 
     // Đăng xuất
     function logout() {
-        document.getElementById('loginSection').classList.remove('hidden');
-        document.getElementById('appSection').classList.add('hidden');
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
+        if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('dataTable').innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">Nhấn "Tải lại danh sách" để hiển thị dữ liệu</td></tr>`;
+            hideMessage('loginMessage');
+            hideMessage('appMessage');
+        }
     }
 
     // 2. READ: Tải dữ liệu
     async function loadData() {
+        toggleBtnState('loadBtn', true, "Tải lại danh sách");
+        const tbody = document.getElementById('dataTable');
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding: 2rem;"><span class="loading-spinner" style="border-top-color:#3498db;width:2rem;height:2rem;margin-right:0;"></span> Đang tải dữ liệu...</td></tr>`;
+
         const res = await callAPI({ action: 'read' });
+        toggleBtnState('loadBtn', false, "Tải lại danh sách");
+
         if (res.success) {
-            const tbody = document.getElementById('dataTable');
             tbody.innerHTML = '';
+            if(res.data.length === 0) {
+                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;">Bảng dữ liệu trống. Hãy thêm dữ liệu mới!</td></tr>`;
+                 return;
+            }
             res.data.forEach(row => {
                 tbody.innerHTML += `
                     <tr>
-                        <td>${row.id}</td>
+                        <td><strong>${row.id}</strong></td>
                         <td>${row.name}</td>
                         <td>${row.description}</td>
-                        <td>
-                            <button onclick="deleteData(${row.id})">Xóa</button>
+                        <td class="action-cell">
+                            <button class="btn-danger btn-sm" onclick="deleteData(${row.id})">Xóa</button>
                         </td>
                     </tr>
                 `;
             });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#e74c3c;">Lỗi: ${res.message}</td></tr>`;
         }
     }
 
     // 3. CREATE: Thêm dữ liệu
     async function createData() {
-        const name = document.getElementById('newName').value;
-        const desc = document.getElementById('newDesc').value;
-        if(!name) return alert("Vui lòng nhập tên!");
+        const name = document.getElementById('newName').value.trim();
+        const desc = document.getElementById('newDesc').value.trim();
+        
+        if(!name) {
+            showMessage('appMessage', "Vui lòng nhập tên!", 'error');
+            return;
+        }
+
+        hideMessage('appMessage');
+        const submitBtn = document.querySelector("#appSection .section-card button.btn-primary");
+        const submitBtnText = submitBtn.innerText;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="loading-spinner"></span> Đang thêm...`;
 
         const res = await callAPI({ action: 'create', name: name, description: desc });
+        
+        submitBtn.disabled = false;
+        submitBtn.innerText = submitBtnText;
+
         if (res.success) {
-            document.getElementById('appMessage').innerText = "Thêm thành công!";
+            showMessage('appMessage', "Thêm thành công!");
             document.getElementById('newName').value = '';
             document.getElementById('newDesc').value = '';
             loadData(); // Tải lại bảng
+        } else {
+            showMessage('appMessage', "Thêm thất bại: " + res.message, 'error');
         }
     }
 
-    // 4. DELETE: Xóa dữ liệu (Update bạn có thể phát triển thêm tương tự)
+    // 4. DELETE: Xóa dữ liệu (Giữ nguyên logic)
     async function deleteData(id) {
-        if(confirm("Bạn có chắc muốn xóa ID: " + id + "?")) {
+        if(confirm("Bạn có chắc chắn muốn xóa ID: " + id + "? Hành động này không thể hoàn tác.")) {
             const res = await callAPI({ action: 'delete', id: id });
             if (res.success) {
+                showMessage('appMessage', "Xóa thành công!");
                 loadData();
+            } else {
+                showMessage('appMessage', "Xóa thất bại: " + res.message, 'error');
             }
         }
     }
